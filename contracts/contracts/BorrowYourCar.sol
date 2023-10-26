@@ -25,11 +25,17 @@ contract BorrowYourCar is ERC721 {
     // ...
     // TODO add any variables if you want
 
-    uint256[] carList;
-    int carNum = 10;
+    //uint256[] carList;
     address public manager;
+    mapping(address => uint256[]) public carList;
+
+    modifier onlyManager {
+        require(msg.sender == manager, "Only system manager");
+        _;
+    }
 
     constructor() ERC721("ZJUToken", "ZJUTokenSymbol") {
+        manager = msg.sender;
     }
 
     function helloworld() pure external returns(string memory) {
@@ -39,10 +45,11 @@ contract BorrowYourCar is ERC721 {
     // ...
     // TODO add any logic if you want
 
-    function mint(address to, uint256 token) public {
+    function mint(address to) onlyManager public {
+        uint256 token = uint256(keccak256(abi.encode(block.timestamp, msg.sender))) ;
         _mint(to, token);
         cars[token] = Car(to, address(0), 0);
-        carList.push(token);
+        carList[to].push(token);
     }
 
     function borrowCar(uint256 token, uint256 time) public {
@@ -57,29 +64,33 @@ contract BorrowYourCar is ERC721 {
         cars[token].borrower = address(0);
     }
 
-    function getAllCars() public returns (uint256[] memory) {
-        return carList;
+    function getAllCars() view public returns (uint256[] memory) {
+        return carList[msg.sender];
     }
 
-    uint256[] unborrowedCars;
-
-    function getAllUnborrowedCars() public returns (uint256[] memory) {
-        delete unborrowedCars;
-        int index = 0;
-        for(uint256 i = 0; i < carList.length; i++) {
-            uint256 token = carList[i];
+    function getAllUnborrowedCars() view public returns (uint256[] memory) {
+        uint256 sum = 0;
+        uint256 index = 0;
+        for(uint256 i = 0; i < carList[msg.sender].length; i++) {
+            uint256 token = carList[msg.sender][i];
             if(cars[token].borrower == address(0)) 
-                unborrowedCars.push(token);
+                sum++;
         }
-        return unborrowedCars;
+        uint256[] memory tmp = new uint256[](sum);
+        for(uint256 i = 0; i < carList[msg.sender].length; i++) {
+            uint256 token = carList[msg.sender][i];
+            if(cars[token].borrower == address(0)) 
+                tmp[index++] = token;
+        }
+        return tmp;
     }
 
-    function getOwner(uint256 token) public returns (address) {
+    function getOwner(uint256 token) view public returns (address) {
         require(cars[token].owner != address(0), "The car has no owner or not exists");
         return cars[token].owner;
     }
 
-    function getBorrower(uint256 token) public returns (address) {
+    function getBorrower(uint256 token) view public returns (address) {
         require(cars[token].owner != address(0), "The car has no owner or not exists");
         return cars[token].borrower;
     }
