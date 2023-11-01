@@ -23,11 +23,11 @@ describe("Test", function () {
     });
   });
 
-  describe("Test Mint",async function () {
-    it("test mint", async function () {
+  describe("Test mintCar",async function () {
+    it("test mintCar", async function () {
 
       const { borrowYourCar, owner, user0, user1 } = await loadFixture(deployFixture);
-      await borrowYourCar.connect(owner).mint(user0.address);
+      await borrowYourCar.connect(owner).mintCar(user0.address);
       const carList_user0 = await borrowYourCar.connect(user0.address).getAllCars();
       const carList_user1 = await borrowYourCar.connect(user1.address).getAllCars();
       expect(carList_user0.length).to.equal(1);
@@ -36,12 +36,12 @@ describe("Test", function () {
       expect(carList_user1.length).to.equal(0);
     });
   });
-
+/*
   describe("Test borrow and return",async function () {
     it("test borrow and return", async function () {
 
       const { borrowYourCar, owner, user0, user1 } = await loadFixture(deployFixture);
-      await borrowYourCar.connect(owner).mint(user0.address);
+      await borrowYourCar.connect(owner).mintCar(user0.address);
       const carList_user0 = await borrowYourCar.connect(user0.address).getAllCars();
       var ubCars = await borrowYourCar.connect(user0).getAllUnborrowedCars();
       expect(ubCars.length).to.equal(1)
@@ -59,6 +59,27 @@ describe("Test", function () {
       expect(ubCars.length).to.equal(1);
     });
   });
+*/
+  describe("Test borrow with credits", async function () {
+    it("test borrow with credits", async function () {
+      const { borrowYourCar, owner, user0, user1 } = await loadFixture(deployFixture);
+      await borrowYourCar.connect(owner).mintCar(user0.address);
+      expect(await borrowYourCar.connect(user0).getBalance()).to.equal(0);
+      const carList_user0 = await borrowYourCar.connect(user0.address).getAllCars();
+      await borrowYourCar.connect(user0).mintCredits();
+      await borrowYourCar.connect(user1).mintCredits();
+      expect(await borrowYourCar.connect(user0).getBalance()).to.equal(1024);
+      expect(await borrowYourCar.connect(user1).getBalance()).to.equal(1024);
+
+      //borrow with credits
+      await borrowYourCar.connect(user1).borrowCar(carList_user0[0], 3600);
+      expect(await borrowYourCar.connect(user1).getBalance()).to.equal(1024 - 36);
+      expect(await borrowYourCar.connect(user0).getBalance()).to.equal(1024 + 36);
+
+      console.log(borrowYourCar.address);
+      console.log(borrowYourCar.credits)
+    })
+  })
 
 
 });

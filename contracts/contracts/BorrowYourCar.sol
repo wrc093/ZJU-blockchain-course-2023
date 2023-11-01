@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 // Uncomment this line to use console.log
 import "hardhat/console.sol";
+import "./credits.sol";
 
 contract BorrowYourCar is ERC721 {
 
@@ -28,13 +29,11 @@ contract BorrowYourCar is ERC721 {
     //uint256[] carList;
     address public manager;
     mapping(address => uint256[]) public carList;
+    Credits public credits;
+    uint256 public cost = 36;
 
-    modifier onlyManager {
-        require(msg.sender == manager, "Only system manager");
-        _;
-    }
-
-    constructor() ERC721("ZJUToken", "ZJUTokenSymbol") {
+    constructor() ERC721("CarToken", "CarTokenSymbol") {
+        credits = new Credits("CreditToken", "CreditTokenSysmbol");
         manager = msg.sender;
     }
 
@@ -45,21 +44,30 @@ contract BorrowYourCar is ERC721 {
     // ...
     // TODO add any logic if you want
 
-    function mint(address to) onlyManager public {
+    function mintCar(address to) public {
         uint256 token = uint256(keccak256(abi.encode(block.timestamp, msg.sender))) ;
         _mint(to, token);
         cars[token] = Car(to, address(0), 0);
         carList[to].push(token);
     }
 
+    function mintCredits() public {
+        credits.creditsMint(msg.sender);
+    } 
+
     function borrowCar(uint256 token, uint256 time) public {
         require(cars[token].borrower == address(0), "The car has been borrowed.");
+        require(cars[token].owner != msg.sender, "You cannot borrow your car.");
         cars[token].borrower = msg.sender;
         cars[token].borrowUntil = time + block.timestamp;
+        uint256 totalCost = cost * time / 3600;
+        //console.log(totalCost);
+        require(credits.balanceOf(msg.sender) >= totalCost, "Credits seem not enough to borrow this car.");
+        credits.transferCredits(msg.sender, getOwner(token), totalCost);
     } 
 
     function returnCar(uint256 token) public {
-        require(cars[token].borrower == msg.sender, "The returner should be the renter of this car.");
+        require(cars[token].borrower == msg.sender, "The returner should be the borrower of this car.");
         require(cars[token].borrowUntil >= block.timestamp, "The return time is expired.");
         cars[token].borrower = address(0);
     }
@@ -93,5 +101,10 @@ contract BorrowYourCar is ERC721 {
     function getBorrower(uint256 token) view public returns (address) {
         require(cars[token].owner != address(0), "The car has no owner or not exists");
         return cars[token].borrower;
+    }
+
+    function getBalance() view public returns (uint256) {
+        uint256 balance = credits.balanceOf(msg.sender);
+        return balance;
     }
 }

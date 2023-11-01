@@ -1,0 +1,29 @@
+.container {
+    width: 500px;
+    height: 600px;
+
+    background: #F2F3F4;
+}
+
+.main {
+    padding: 10px;
+    position: fixed;
+}
+
+.operation {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    margin-top: 20px;
+}
+
+.buttons {
+    height: 160px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
