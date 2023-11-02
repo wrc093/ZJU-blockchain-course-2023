@@ -135,8 +135,9 @@ const LotteryPage = () => {
                 await CarContract.methods.mintCar(account).send({
                     from: account
                 })
-
-                alert('You have played the game.')
+                await getCarList();
+                await getUnborrowedCars();
+                alert('领取成功')
             } catch (error: any) {
                 alert(error.message)
             }
@@ -240,7 +241,7 @@ const LotteryPage = () => {
     }
 
     const handleSelectChange = (value: number) => {
-        setBorrowTime(new BigNumber(value))
+        setBorrowTime(new BigNumber(value * 3600))
     }
 
     const handleOk = async () => {
@@ -253,7 +254,7 @@ const LotteryPage = () => {
                 })
                 await updateBalance();
             } catch (error: any) {
-                alert(error)
+                alert(error.message)
             }
         }
     }
@@ -293,7 +294,7 @@ const LotteryPage = () => {
                             </Card>
                             <Card title="汽车查询" bordered hoverable>
                                 <Form  >
-                                    <Form.Item label="输入一个数字">
+                                    <Form.Item label="查询汽车：">
                                         <Input type="number" onChange={handleInputChange} placeholder='请输入你要查询的汽车的token' />
                                     </Form.Item>
                                     <Form.Item>
