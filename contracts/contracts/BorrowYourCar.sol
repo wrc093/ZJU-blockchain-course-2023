@@ -30,7 +30,7 @@ contract BorrowYourCar is ERC721 {
     address public manager;
     mapping(address => uint256[]) public carList;
     Credits public credits;
-    uint256 public cost = 36;
+    uint256 public cost = 1;
 
     constructor() ERC721("CarToken", "CarTokenSymbol") {
         credits = new Credits("CreditToken", "CreditTokenSysmbol");

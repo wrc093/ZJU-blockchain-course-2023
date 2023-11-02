@@ -1,15 +1,16 @@
 import { Button, Image } from 'antd';
 import { Header } from "../../asset";
 import { UserOutlined } from "@ant-design/icons";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ChangeEvent } from 'react';
 import { web3, CarContract, CreditContract } from "../../utils/contract";
 import './index.css';
 import { Carousel, Collapse } from 'antd';
 import React from 'react';
 import { Card, Space, Row, Col } from 'antd';
 import { Tabs, Modal, Form, Input, InputNumber, Select } from 'antd';
+import BigNumber from 'bignumber.js'
 const { TabPane } = Tabs;
-const {Option} = Select
+const { Option } = Select
 
 
 import car1 from '../../asset/car1.jpg';
@@ -38,16 +39,16 @@ const LotteryPage = () => {
     const [account, setAccount] = useState('')
     const [accounts, setAccounts] = useState([])
     const [balance, setBalance] = useState(0)
-    const [carList, setCarList] = useState<any[]>([]);
-    const [ubCarList, setUbCarList] = useState<any[]>([])
-    const [borrowCarToken, setBorrowCarToken] = useState('')
-    const [borrowTime, setBorrowTime] = useState('')
+    const [carList, setCarList] = useState<BigNumber[]>([]);
+    const [ubCarList, setUbCarList] = useState<BigNumber[]>([])
+    const [borrowCarToken, setBorrowCarToken] = useState(new BigNumber(0))
+    const [borrowTime, setBorrowTime] = useState(new BigNumber(0))
     const [borrower, setBorrower] = useState('')
     const [owner, setOwner] = useState('')
-    const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4'];
     const images = [car1, car2, car3, car4, car5]
-    const [tabPosition, setTabPosition] = useState('left')
     const [visibility, setVisibility] = useState(false)
+    const [queryCarToken, setQueryCarToken] = useState(new BigNumber(0))
+    const [queryResultShow, setQueryResultShow] = useState(false)
 
     useEffect(() => {
         // 初始化检查用户是否已经连接钱包
@@ -62,7 +63,7 @@ const LotteryPage = () => {
                     setAccount(accounts_[0])
                 }
                 setAccounts(accounts_)
-                console.log(accounts)
+                //console.log(accounts)
             }
         }
 
@@ -71,7 +72,7 @@ const LotteryPage = () => {
 
 
     const updateBalance = async () => {
-        if(CarContract) {
+        if (CarContract) {
             const ab = await CarContract.methods.getBalance().call({
                 from: account
             })
@@ -165,48 +166,12 @@ const LotteryPage = () => {
             try {
                 var tmp: any[] = []
                 for (var acc in accounts) {
-                    console.log(accounts[acc])
+                    //console.log(accounts[acc])
                     tmp = [...tmp, ...(await CarContract.methods.getAllUnborrowedCars().call({
                         from: accounts[acc]
                     }))]
-                    console.log(await CarContract.methods.getAllUnborrowedCars().call({
-                        from: accounts[acc]
-                    }))
                 }
                 setUbCarList(tmp)
-            } catch (error: any) {
-                alert(error.message)
-            }
-        }
-    }
-
-    const borrowCar = async () => {
-        if (account === '') {
-            alert('You have not connected wallet yet.')
-            return
-        }
-        if (CarContract) {
-            try {
-                await CarContract.methods.borrowCar(borrowCarToken, borrowTime).send({
-                    from: account
-                })
-            } catch (error: any) {
-                alert(error.message)
-            }
-        }
-    }
-
-    const getCarOwner = async () => {
-        if (account === '') {
-            alert('You have not connected wallet yet.')
-            return null;
-        }
-        if (CarContract) {
-            try {
-                console.log(owner)
-                return await CarContract.methods.getOwner(borrowCarToken).call({
-                    from: account
-                })
             } catch (error: any) {
                 alert(error.message)
             }
@@ -261,8 +226,6 @@ const LotteryPage = () => {
         getCarList();
     }
 
-
-
     const disconnectWallet = () => {
         setAccount('');
     }
@@ -270,6 +233,49 @@ const LotteryPage = () => {
     const changeVisibility = () => {
         setVisibility(!visibility);
     };
+
+    const handleBorrowCar = (car: BigNumber) => {
+        changeVisibility();
+        setBorrowCarToken(car)
+    }
+
+    const handleSelectChange = (value: number) => {
+        setBorrowTime(new BigNumber(value))
+    }
+
+    const handleOk = async () => {
+        changeVisibility()
+        if (CarContract) {
+            try {
+                console.log(borrowCarToken.toString())
+                await CarContract.methods.borrowCar(borrowCarToken, borrowTime).send({
+                    from: account
+                })
+                await updateBalance();
+            } catch (error: any) {
+                alert(error)
+            }
+        }
+    }
+
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setQueryCarToken(new BigNumber(e.target.value));
+    };
+
+    const handleSubmit = async () => {
+        setOwner(await CarContract.methods.getOwner(queryCarToken).call({
+            from: account
+        }))
+        setBorrower(await CarContract.methods.getBorrower(queryCarToken).call({
+            from: account
+        }))
+        //console.log(borrower + ", " + owner)
+        changeQueryShow()
+    }
+
+    const changeQueryShow = () => {
+        setQueryResultShow(!queryResultShow)
+    }
 
     return (
         <div style={{ position: 'absolute', top: 0, left: 0 }} className='main'>
@@ -279,19 +285,45 @@ const LotteryPage = () => {
 
                 <Tabs defaultActiveKey="1" tabPosition='left'>
                     <TabPane tab="主页" key="1">
-                        <Button type="primary" onClick={onClaimTokenAirdrop}>领取浙大币空投</Button>
-                        <Button onClick={getInitCar}>领取车</Button>
-                        <Button onClick={getCarList}>查看车列表</Button>
-                        <Button onClick={getUnborrowedCars}>查看所有未借车</Button>
-                        <Button>查看车辆信息</Button>
-                        <Button onClick={borrowCar}>借车</Button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <Card title="领取(测试)" bordered hoverable>
+                                <Button type="primary" onClick={onClaimTokenAirdrop}>领取测试代币</Button>
+                                <Button onClick={getInitCar}>领取测试车</Button>
 
-                        <div className='account'>
-                            {account === '' && <Button onClick={onClickConnectWallet}>连接钱包</Button>}
-                            {account !== '' && <Button onClick={disconnectWallet}>断开连接</Button>}
-                            <div>当前用户：{account === '' ? '无用户连接' : account}</div>
-                            <div>当前账户代币余额：{account === '' ? 0 : balance}</div>
+                            </Card>
+                            <Card title="汽车查询" bordered hoverable>
+                                <Form  >
+                                    <Form.Item label="输入一个数字">
+                                        <Input type="number" onChange={handleInputChange} placeholder='请输入你要查询的汽车的token' />
+                                    </Form.Item>
+                                    <Form.Item>
+                                        <Button type="primary" onClick={handleSubmit}>
+                                            提交
+                                        </Button>
+                                    </Form.Item>
+                                </Form>
+                            </Card>
+                            <Card title="连接状态" bordered hoverable>
+
+                                <div className='account'>
+                                    {account === '' && <Button onClick={onClickConnectWallet}>连接钱包</Button>}
+                                    {account !== '' && <Button onClick={disconnectWallet}>断开连接</Button>}
+                                    <div>当前用户：{account === '' ? '无用户连接' : account}</div>
+                                    <div>当前账户代币余额：{account === '' ? 0 : balance}</div>
+                                </div>
+                            </Card>
                         </div>
+
+                        <Modal
+                            title='查询结果'
+                            open={queryResultShow}
+                            onCancel={changeQueryShow}
+                            onOk={changeQueryShow}
+                        >
+                            <h4>拥有者: {owner}</h4>
+                            <h4>{borrower === "0x" + "0".repeat(40) ? '未被借出' : '借车人: ' + borrower}</h4>
+                        </Modal>
+
                     </TabPane>
                     <TabPane tab="我的车辆" key="2">
                         <div style={{ height: '800px', overflowY: 'auto' }} className="">
@@ -321,11 +353,12 @@ const LotteryPage = () => {
                                         <h4>{'car' + index}</h4>
                                         <img src={images[index % 5]} alt={images[index % 5]} />
                                         <h4>{'ID: ' + car}</h4>
-                                        <Button type="primary" onClick={changeVisibility}>Borrow</Button>
+                                        <Button type="primary" onClick={() => handleBorrowCar(car)}>Borrow</Button>
                                         <Modal
                                             title="对话框"
                                             open={visibility}
-                                            onCancel={changeVisibility}>
+                                            onCancel={changeVisibility}
+                                            onOk={handleOk}>
                                             <Form>
                                                 <Form.Item label="请选择租车的时长(小时)">
                                                     <div>
@@ -334,6 +367,7 @@ const LotteryPage = () => {
                                                             style={{ width: 200 }}
                                                             placeholder="选择一个数字"
                                                             optionFilterProp="children"
+                                                            onChange={handleSelectChange}
                                                         >
                                                             {[...Array(100).keys()].map(i => (
                                                                 <Option key={i + 1} value={i + 1}>
