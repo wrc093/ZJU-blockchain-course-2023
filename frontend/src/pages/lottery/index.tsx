@@ -37,7 +37,7 @@ const contentStyle: React.CSSProperties = {
 const LotteryPage = () => {
 
     const [account, setAccount] = useState('')
-    const [accounts, setAccounts] = useState([])
+    const [accounts, setAccounts] = useState<string[]>([])
     const [balance, setBalance] = useState(0)
     const [carList, setCarList] = useState<BigNumber[]>([]);
     const [ubCarList, setUbCarList] = useState<BigNumber[]>([])
@@ -218,7 +218,12 @@ const LotteryPage = () => {
             const accounts_ = await ethereum.request({ method: 'eth_accounts' });
             // 如果用户存在，展示其account，否则显示错误信息
             setAccount(accounts_[0] || 'Not able to get accounts');
-            setAccounts(accounts_);
+            for(var i in accounts_) {
+                if(accounts_[i] !== '' && !accounts.includes(accounts_[i])) {
+                    setAccounts([...accounts, accounts_[i]])
+                }
+            }
+            //setAccounts(accounts_);
             console.log(accounts)
         } catch (error: any) {
             alert(error.message)
